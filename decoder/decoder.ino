@@ -25,6 +25,7 @@ int pins[16] = {
 
 void setup() {
   setPins(pins);
+  testLEDs(pins);
 }
 
 void loop() {
@@ -77,6 +78,17 @@ void displayInstruction(int *inPins) {
     }
   }
   Serial.println();
+}
+
+void testLEDs ( int *inPins )
+{
+  for ( int i = 0; i < 16; i++ )
+  {
+    digitalWrite(inPins[i], HIGH);
+    delay(150);
+    digitalWrite(inPins[i], LOW);
+    delay(10);
+  }
 }
 
 /*
@@ -215,7 +227,23 @@ void f18thru19 ( int *in )
 
 void addSub ( int *in )
 {
-  
+  int rd = bit(2)*in[2] + bit(1)*in[1] + bit(0)*in[0];
+  int rs = bit(2)*in[5] + bit(1)*in[4] + bit(0)*in[3];
+  int rn_off = bit(2)*in[8] + bit(1)*in[7] + bit(0)*in[6];
+  if ( !in[9] )
+    Serial.print("ADD ");
+  else
+    Serial.print("SUB ");
+  Serial.print ( "R" );
+  Serial.print ( rd );
+  Serial.print ( ", R" );
+  Serial.print ( rs );
+  Serial.print ( ", " );
+  if ( !in[10] )
+    Serial.print ( "R" );
+  else
+    Serial.print( "#" );
+  Serial.println ( rn_off );
 }
 
 void moveShifted ( int *in )
