@@ -16,49 +16,58 @@
  * in the array will be the MSB even though in code it will be at index 0. So, when
  * reviewing this, treat pinsOut[0] as bit 15, pinsOut[1] as bit 14 and so on to 0.
  */
-int pinsOut[16];
-int pinsIn[16];
+
+int pins[16] = {
+  22,23,24,25,
+  26,27,28,29,
+  30,31,32,33,
+  34,35,36,37};
 
 void setup() {
-  Serial.begin(9600);
-  setPins(pinsIn, pinsOut);
+  setPins(pins);
 }
 
 void loop() {
-  getInstruction(&pinsOut[0]);
-  displayInstruction(&pinsOut[0]);
-  decodeInstruction(&pinsOut[0]);
+  Serial.begin(9600);
+  getInstruction(pins);
+  displayInstruction(pins);
+  decodeInstruction(pins);
+  Serial.end();
 }
 
 /*
- * Initialize two sets of 16 pins for input and output
+ *initialize a set of pins for output
  */
-void setPins(int *in, int *out) {
-  for (int i = 0 ; i < 15 ; i++) {
-    in[i] = i;
-    pinMode(in[i], INPUT);
-    out[i] = i;
-    pinMode(out[i], OUTPUT);
+void setPins(int *inPins) {
+  for (int i = 0 ; i < 16 ; i++) {
+    pinMode(inPins[i], OUTPUT);
   }
 }
 
 /*
  * Prompt user for instruction bit vector
  */
-void getInstruction(int *out) {
-  for (int i = 0 ; i < 15 ; i++) {
+void getInstruction(int *inPins) {
+  for (int i = 0 ; i < 16 ; i++) {
     while (Serial.available() == 0);
-    if (Serial.parseInt() == 1) digitalWrite(out[i], HIGH);
-    else digitalWrite(out[i], LOW);
+    char charRead = Serial.read();
+    if ( charRead == '1')
+    {
+      digitalWrite(inPins[i], HIGH);
+    }
+    else
+    {
+      digitalWrite(inPins[i], LOW);
+    }
   }
 }
 
 /*
  * Display the instruction bit vector entered by the user
  */
-void displayInstruction(int *out) {
-  for (int i = 0 ; i < 15 ; i++) {
-    if (HIGH == digitalRead(out[i])) {
+void displayInstruction(int *inPins) {
+  for (int i = 0 ; i < 16 ; i++) {
+    if (digitalRead(inPins[i]) == HIGH) {
       Serial.print(1); 
       Serial.print(" ");
     }
@@ -75,7 +84,19 @@ void displayInstruction(int *out) {
  * Note - in the final project, this function will be taking pinsIn which will 
  *        be read from our circuit, however, for testing purposes pinsOut should do
  */
-void decodeInstruction(int *in) {
+void decodeInstruction(int *inPins) {
+  //reverse instruction from what was read so that we can process it human-like
+  int in[16];
+  for (int i = 0 ; i < 16 ; i++) {
+    if (digitalRead(inPins[i]) == HIGH) {
+      in[15-i] = HIGH;
+    }
+    else {
+      in[15-i] = LOW;
+    }
+  }
+  
+  
   //determine the function
   int func = bit(2)*in[15] + bit(1)*in[14] + bit(0)*in[13];
   switch ( func )
@@ -117,7 +138,7 @@ void decodeInstruction(int *in) {
   }
 }
 
-void f1thru2 ( int * in )
+void f1thru2 ( int *in )
 {
   int test = bit(1)*in[12] + bit(0)*in[11];
   if ( test == 3 )
@@ -126,12 +147,12 @@ void f1thru2 ( int * in )
     moveShifted ( in );
 }
 
-void f3 ( int * in )
+void f3 ( int *in )
 {
   immMCAS ( in );
 }
 
-void f4thru8 ( int * in )
+void f4thru8 ( int *in )
 {
   if ( !in[12] )
     if ( !in[11] )
@@ -148,12 +169,12 @@ void f4thru8 ( int * in )
       loadStoreSignExt ( in );
 }
 
-void f9 ( int * in )
+void f9 ( int *in )
 {
   loadStoreImm ( in );
 }
 
-void f10thru11 ( int * in )
+void f10thru11 ( int *in )
 {
   if ( !in[12] )
     loadStoreHalf ( in );
@@ -161,8 +182,9 @@ void f10thru11 ( int * in )
     loadStoreSPRel ( in );
 }
 
-void f12thru14 ( int * in )
+void f12thru14 ( int *in )
 {
+  Serial.println("made it to 5");
   if ( !in[12] )
     loadAddr ( in );
   else
@@ -172,7 +194,7 @@ void f12thru14 ( int * in )
       pushPop ( in );
 }
 
-void f15thru17 ( int * in )
+void f15thru17 ( int *in )
 {
   if ( !in[12] )
     multLoadStore ( in );
@@ -183,7 +205,7 @@ void f15thru17 ( int * in )
       softwareInt ( in );
 }
 
-void f18thru19 ( int * in )
+void f18thru19 ( int *in )
 {
   if ( !in[12] )
     uncondBranch ( in );
@@ -192,6 +214,11 @@ void f18thru19 ( int * in )
 }
 
 void addSub ( int *in )
+{
+  
+}
+
+void moveShifted ( int *in )
 {
   int op = bit(1)*in[12] + bit(0)*in[11];
   int rd = bit(2)*in[2] + bit(1)*in[1] + bit(0)*in[0];
@@ -216,11 +243,6 @@ void addSub ( int *in )
   Serial.print(rs);
   Serial.print(", #");
   Serial.println(offset);
-}
-
-void moveShifted ( int *in )
-{
-  
 }
 
 void immMCAS ( int *in )
