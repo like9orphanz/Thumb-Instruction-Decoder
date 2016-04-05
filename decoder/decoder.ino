@@ -89,6 +89,15 @@ void testLEDs ( int *inPins )
     digitalWrite(inPins[i], LOW);
     delay(10);
   }
+  for ( int i = 0; i < 16; i++ )
+  {
+    digitalWrite(inPins[i], HIGH);
+  }
+  delay(400);
+  for ( int i = 0; i < 16; i++ )
+  {
+    digitalWrite(inPins[i], LOW);
+  }
 }
 
 /*
