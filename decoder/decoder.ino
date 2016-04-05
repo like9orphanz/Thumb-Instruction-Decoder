@@ -49,7 +49,7 @@ void getInstruction(int *out) {
   for (int i = 0 ; i < 15 ; i++) {
     while (Serial.available() == 0);
     if (Serial.parseInt() == 1) digitalWrite(out[i], HIGH);
-    else digitalWrite(out[i], HIGH);
+    else digitalWrite(out[i], LOW);
   }
 }
 
@@ -75,27 +75,235 @@ void displayInstruction(int *out) {
  * Note - in the final project, this function will be taking pinsIn which will 
  *        be read from our circuit, however, for testing purposes pinsOut should do
  */
-void decodeInstruction(int *out) {
-  int isMoveShift = 1;
-  for (int i = 0 ; i < 2 ; i--) {
-    if (digitalRead(out[i]) == HIGH) isMoveShift = 0;
-    if (isMoveShift == 0) break;
+void decodeInstruction(int *in) {
+  //determine the function
+  int func = bit(2)*in[15] + bit(1)*in[14] + bit(0)*in[13];
+  switch ( func )
+  {
+    case 0:
+      //f 1 2
+      f1thru2 ( in );
+      break;
+    case 1:
+      //f 3
+      f3 ( in );
+      break;
+    case 2:
+      //f 4 5 6 7 8
+      f4thru8( in );
+      break;
+    case 3:
+      //f 9
+      f9 ( in );
+      break;
+    case 4:
+      //f 10 11
+      f10thru11 ( in );
+      break;
+    case 5:
+      //f 12 13 14
+      f12thru14 ( in );
+      break;
+    case 6:
+      //f 15 16 17
+      f15thru17( in );
+      break;
+    case 7:
+      //f 18 19
+      f18thru19( in );
+      break;
+    deafult:
+      Serial.println("An error occurred when finding the function.");
   }
+}
 
-  if (isMoveShift == 0)
-    Serial.println("Not move/shift");
-  else{
-    if (digitalRead(out[3]) == HIGH && digitalRead(out[4]) == HIGH) {
-      isMoveShift = 0;
-      Serial.println("Not move/shift");
-    }
-  }
+void f1thru2 ( int * in )
+{
+  int test = bit(1)*in[12] + bit(0)*in[11];
+  if ( test == 3 )
+    addSub ( in );
+  else
+    moveShifted ( in );
+}
 
-  // Interperet OPCode
-  if (isMoveShift == 1) {
-    if (digitalRead(out[3]) == LOW && digitalRead(out[4]) == LOW) Serial.println("LSL");
-    else if (digitalRead(out[3]) == LOW && digitalRead(out[4]) == HIGH) Serial.println("LSR");
-    else Serial.println("ASR");  
+void f3 ( int * in )
+{
+  immMCAS ( in );
+}
+
+void f4thru8 ( int * in )
+{
+  if ( !in[12] )
+    if ( !in[11] )
+      if ( !in[10] )
+        aluOps ( in );
+      else
+        hiRegOps ( in );
+    else
+      PCRelLoad ( in );
+  else
+    if ( !in[9] )
+      loadStoreRegOffset ( in );
+    else
+      loadStoreSignExt ( in );
+}
+
+void f9 ( int * in )
+{
+  loadStoreImm ( in );
+}
+
+void f10thru11 ( int * in )
+{
+  if ( !in[12] )
+    loadStoreHalf ( in );
+  else
+    loadStoreSPRel ( in );
+}
+
+void f12thru14 ( int * in )
+{
+  if ( !in[12] )
+    loadAddr ( in );
+  else
+    if ( !in[10] )
+      addOffsetSP ( in );
+    else
+      pushPop ( in );
+}
+
+void f15thru17 ( int * in )
+{
+  if ( !in[12] )
+    multLoadStore ( in );
+  else
+    if ( !( in[11] && in[10] ) )
+      condBranch ( in );
+    else
+      softwareInt ( in );
+}
+
+void f18thru19 ( int * in )
+{
+  if ( !in[12] )
+    uncondBranch ( in );
+  else
+    langBranch ( in );
+}
+
+void addSub ( int *in )
+{
+  int op = bit(1)*in[12] + bit(0)*in[11];
+  int rd = bit(2)*in[2] + bit(1)*in[1] + bit(0)*in[0];
+  int rs = bit(2)*in[5] + bit(1)*in[4] + bit(0)*in[3];
+  int offset = bit(4)*in[10] + bit(3)*in[9] + bit(2)*in[8] + bit(1)*in[7] + bit(0)*in[6];
+  switch ( op )
+  {
+    case 0:
+      Serial.print("LSL R");
+      break;
+    case 1:
+      Serial.print("LSR R");
+      break;
+    case 2:
+      Serial.print("ASR R");
+      break;
+    default:
+      Serial.println("problem decoding in addSub()");
   }
+  Serial.print(rd);
+  Serial.print(", R");
+  Serial.print(rs);
+  Serial.print(", #");
+  Serial.println(offset);
+}
+
+void moveShifted ( int *in )
+{
+  
+}
+
+void immMCAS ( int *in )
+{
+  
+}
+
+void aluOps ( int *in )
+{
+  
+}
+
+void hiRegOps ( int *in )
+{
+  
+}
+
+void PCRelLoad ( int *in )
+{
+  
+}
+void loadStoreRegOffset ( int *in )
+{
+  
+}
+
+void loadStoreSignExt ( int *in )
+{
+  
+}
+
+void loadStoreImm ( int *in )
+{
+  
+}
+
+void loadStoreHalf ( int *in )
+{
+  
+}
+
+void loadStoreSPRel ( int *in )
+{
+  
+}
+
+void loadAddr ( int *in )
+{
+  
+}
+
+void addOffsetSP ( int *in )
+{
+  
+}
+
+void pushPop ( int *in )
+{
+  
+}
+
+void multLoadStore ( int *in )
+{
+  
+}
+
+void condBranch ( int *in )
+{
+  
+}
+
+void softwareInt ( int *in )
+{
+  
+}
+
+void uncondBranch ( int *in )
+{
+  
+}
+
+void langBranch ( int *in )
+{
+  
 }
 
