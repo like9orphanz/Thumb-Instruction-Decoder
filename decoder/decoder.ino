@@ -205,7 +205,6 @@ void f10thru11 ( int *in )
 
 void f12thru14 ( int *in )
 {
-  Serial.println("made it to 5");
   if ( !in[12] )
     loadAddr ( in );
   else
@@ -310,7 +309,7 @@ void immMCAS ( int *in )
   }
   
     Serial.print(rd);
-    Serial.print(", ");
+    Serial.print(", #");
     Serial.println(offset8);
 }
 
@@ -352,6 +351,24 @@ void aluOps ( int *in )
     case 9:
       Serial.print("NEG R");
     break;
+    case 10:
+      Serial.print("CMP R");
+      break;
+    case 11:
+      Serial.print("CMN R");
+      break;
+    case 12:
+      Serial.print("ORR R");
+      break;
+    case 13:
+      Serial.print("MUL R");
+      break;
+    case 14:
+      Serial.print("BIC R");
+      break;
+    case 15:
+      Serial.print("MVN R");
+      break;
     default:
       Serial.println("Error decoding aluOps");
       exit(-1);
@@ -365,31 +382,42 @@ void aluOps ( int *in )
 void hiRegOps ( int *in )
 {
   int op = bit(1)*in[9] + bit(0)*in[8];
+  int h1 = in[7];
+  int h2 = in[6];
   int rs = bit(2)*in[5] + bit(1)*in[4] + bit(0)*in[3];
   int rd = bit(2)*in[2] + bit(1)*in[1] + bit(0)*in[0];
 
   switch (op)
   {
     case 0:
-      Serial.print("ADD R");
+      Serial.print("ADD ");
     break;
     case 1:
-      Serial.print("CMP R");
+      Serial.print("CMP ");
     break;
     case 2:
-      Serial.print("MOV R");
+      Serial.print("MOV ");
     break;
     case 3:
-      Serial.print("BX R");
+      Serial.print("BX ");
     break;
     default:
       Serial.println("Error in decoding Hi register operations/branch exchange");
       exit(-1);
   }
-
-  Serial.print(rd);
-  Serial.print(", ");
-  Serial.print("R");
+  if ( op != 3 )
+  {
+    if ( h1 )
+      Serial.print("H");
+    else
+      Serial.print("R");
+    Serial.print(rd);
+    Serial.print(", ");
+  }
+  if ( h2 )
+    Serial.print("H");
+  else
+    Serial.print("R");
   Serial.println(rs);
 }
 
@@ -504,7 +532,7 @@ void loadStoreImm ( int *in )
   Serial.print(rd);
   Serial.print(", [R");
   Serial.print(rb);
-  Serial.print("#");
+  Serial.print(", #");
   Serial.print(offset5);
   Serial.println("]");
 }
@@ -547,7 +575,7 @@ void loadAddr ( int *in )
   int rd = bit(2)*in[10] + bit(1)*in[9] + bit(0)*in[8];
   for (int i = 7 ; i > -1 ; i--) word8 = word8 + bit(i)*in[i];
 
-  Serial.print("R");
+  Serial.print("ADD R");
   Serial.print(rd);
   Serial.print(", ");
   if (in[11] == 0) Serial.print("PC, #");
@@ -558,10 +586,10 @@ void loadAddr ( int *in )
 void addOffsetSP ( int *in )
 {
   int sWord7 = 0;
-  for (int i = 7 ; i > -1 ; i--) sWord7 = sWord7 + bit(i)*in[i];
+  for (int i = 6 ; i > -1 ; i--) sWord7 = sWord7 + bit(i)*in[i];
 
   Serial.print("ADD SP, #");
-  if (in[11] == 1) Serial.print("-");
+  if (in[7] == 1) Serial.print("-");
   Serial.println(sWord7);
 }
 
@@ -569,71 +597,81 @@ void pushPop ( int *in )
 {
   int flag;
   int lr = bit(1)*in[11] + bit(0)*in[8];
+  int sum = 0;
   
-  switch (lr)
+  for ( int i = 7; i > -1; i-- )
   {
-    case 0:
-      Serial.print("PUSH {");
-      for (int i = 7 ; i > -1 ; i--) {
-        flag = 0;
-        if (in[i] == 1) {
-          Serial.print("R");
-          Serial.print(i);
-          for (int j = i ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-          if (flag == 1) Serial.print(",");
-          else break;
+    sum += in[i];
+  }
+  if ( sum == 0 )
+    Serial.println("Invalid Instruciton. No registers defined.");
+  else
+  {
+    switch (lr)
+    {
+      case 0:
+        Serial.print("PUSH {");
+        for (int i = 7 ; i > -1 ; i--) {
+          flag = 0;
+          if (in[i] == 1) {
+            Serial.print("R");
+            Serial.print(i);
+            for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
+            if (flag == 1) Serial.print(", ");
+            else break;
+          }
         }
-      }
-      Serial.println("}");
-    break;
-    
-    case 1:
-      Serial.print("PUSH {");
-      for (int i = 7 ; i > -1 ; i--) {
-        flag = 0;
-        if (in[i] == 1) {
-          Serial.print("R");
-          Serial.print(i);
-          for (int j = i ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-          if (flag == 1) Serial.print(",");
-          else break;
+        Serial.println("}");
+      break;
+      
+      case 1:
+        Serial.print("PUSH {");
+        for (int i = 7 ; i > -1 ; i--) {
+          flag = 0;
+          if (in[i] == 1) {
+            Serial.print("R");
+            Serial.print(i);
+            for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
+            if (flag == 1) Serial.print(", ");
+            else break;
+          }
         }
-      }
-      Serial.println(" LR}");
-    break;
-
-    case 2:
-      Serial.print("POP {");
-      for (int i = 7 ; i > -1 ; i--) {
-        flag = 0;
-        if (in[i] == 1) {
-          Serial.print("R");
-          Serial.print(i);
-          for (int j = i ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-          if (flag == 1) Serial.print(",");
-          else break;
+        Serial.println(", LR}");
+      break;
+  
+      case 2:
+        Serial.print("POP {");
+        for (int i = 7 ; i > -1 ; i--) {
+          flag = 0;
+          if (in[i] == 1) {
+            Serial.print("R");
+            Serial.print(i);
+            for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
+            if (flag == 1) Serial.print(", ");
+            else break;
+          }
         }
-      }
-      Serial.println("}");
-    break;
-
-    case 3:
-      Serial.print("POP {");
-      for (int i = 7 ; i > -1 ; i--) {
-        flag = 0;
-        if (in[i] == 1) {
-          Serial.print("R");
-          Serial.print(i);
-          for (int j = i ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-          if (flag == 1) Serial.print(",");
-          else break;
+        Serial.println("}");
+      break;
+  
+      case 3:
+        Serial.print("POP {");
+        for (int i = 7 ; i > -1 ; i--) {
+          flag = 0;
+          if (in[i] == 1) {
+            Serial.print("R");
+            Serial.print(i);
+            for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
+            if (flag == 1) Serial.print(", ");
+            else break;
+          }
         }
-      }
-      Serial.println(" PC}");
-    break;
-    default:
-      Serial.println("Error decoding push/pop registers");
-      exit (-1);  
+        Serial.println(", PC}");
+      break;
+      default:
+        Serial.println("Error decoding push/pop registers");
+        exit (-1);  
+    }
   }
 }
 
@@ -653,8 +691,8 @@ void multLoadStore ( int *in )
     if (in[i] == 1) {
       Serial.print("R");
       Serial.print(i);
-      for (int j = i ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-      if (flag == 1) Serial.print(",");
+      for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
+      if (flag == 1) Serial.print(", ");
       else break;
     }
   }
@@ -665,55 +703,59 @@ void multLoadStore ( int *in )
 void condBranch ( int *in )
 {
   int cond = bit(3)*in[11] + bit(2)*in[10] + bit(1)*in[9] + bit(0)*in[8];
+  int sOffset8 = 0;
+  for ( int i = 7; i > -1; i-- ) sOffset8 += bit(i)*in[i];
 
   switch (cond)
   {
     case 0:
-      Serial.println("BEQ label");
+      Serial.print("BEQ ");
     break;
     case 1:
-      Serial.println("BNE label");
+      Serial.print("BNE ");
     break;
     case 2:
-      Serial.println("BCS label");
+      Serial.print("BCS ");
     break;
     case 3:
-      Serial.println("BCC label");
+      Serial.print("BCC ");
     break;
     case 4:
-      Serial.println("BMI label");
+      Serial.print("BMI ");
     break;
     case 5:
-      Serial.println("BPL label");
+      Serial.print("BPL ");
     break;
     case 6:
-      Serial.println("BVS label");
+      Serial.print("BVS ");
     break;
     case 7:
-      Serial.println("BVC label");
+      Serial.print("BVC ");
     break;
     case 8:
-      Serial.println("BHI label");
+      Serial.print("BHI ");
     break;
     case 9:
-      Serial.println("BLS label");
+      Serial.print("BLS ");
     break;
     case 10:
-      Serial.println("BGE label");
+      Serial.print("BGE ");
     break;
     case 11:
-      Serial.println("BLT label");
+      Serial.print("BLT ");
     break;
     case 12:
-      Serial.println("BGT label");
+      Serial.print("BGT ");
     break;
     case 13:
-      Serial.println("BLE label");
+      Serial.print("BLE ");
     break;
     default:
       Serial.println("Error decoding conditional branch");
       exit (-1);
   }
+  Serial.print("#");
+  Serial.println(sOffset8);
 }
 
 void softwareInt ( int *in )
