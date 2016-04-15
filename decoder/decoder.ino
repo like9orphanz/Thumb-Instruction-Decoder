@@ -17,6 +17,9 @@
  * reviewing this, treat pinsOut[0] as bit 15, pinsOut[1] as bit 14 and so on to 0.
  */
 
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+
 int pins[16] = {
   22,23,24,25,
   26,27,28,29,
@@ -219,7 +222,7 @@ void f15thru17 ( int *in )
   if ( !in[12] )
     multLoadStore ( in );
   else
-    if ( !( in[11] && in[10] ) )
+    if ( !( in[11] && in[10] && in[9] && in[10] ) )
       condBranch ( in );
     else
       softwareInt ( in );
@@ -704,7 +707,7 @@ void condBranch ( int *in )
 {
   int cond = bit(3)*in[11] + bit(2)*in[10] + bit(1)*in[9] + bit(0)*in[8];
   int sOffset8 = 0;
-  for ( int i = 7; i > -1; i-- ) sOffset8 += bit(i)*in[i];
+  for (int i = 6 ; i > -1 ; i--) sOffset8 = sOffset8 + bit(i+1)*in[i];
 
   switch (cond)
   {
@@ -754,7 +757,8 @@ void condBranch ( int *in )
       Serial.println("Error decoding conditional branch");
       exit (-1);
   }
-  Serial.print("#");
+  Serial.print("");
+  if ( in[7] ) sOffset8 = (sOffset8*-1) - 2;
   Serial.println(sOffset8);
 }
 
@@ -769,7 +773,11 @@ void softwareInt ( int *in )
 
 void uncondBranch ( int *in )
 {
-  Serial.println("B label");
+  int value11 = 0;
+  for ( int i = 9; i > -1; i--) value11 += bit(i+1)*in[i];
+  Serial.print("B ");
+  if ( in[10] ) value11 = (value11*-1) - 2;
+  Serial.println(value11);
 }
 
 void longBranch ( int *in )
