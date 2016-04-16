@@ -18,22 +18,31 @@
  */
 
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+LiquidCrystal lcd(38,39,40,41,42,43);
+
+//int pins[16] = {
+//  22,23,24,25,
+//  26,27,28,29,
+//  30,31,32,33,
+//  34,35,36,37};
 
 int pins[16] = {
-  22,23,24,25,
-  26,27,28,29,
-  30,31,32,33,
-  34,35,36,37};
+  37,36,35,34,
+  33,32,31,30,
+  29,28,27,26,
+  25,24,23,22};
 
 void setup() {
   setPins(pins);
+  setupLCD();
   testLEDs(pins);
+  clearLCD();
 }
 
 void loop() {
   Serial.begin(9600);
   getInstruction(pins);
+  clearLCD();
   displayInstruction(pins);
   decodeInstruction(pins);
   Serial.end();
@@ -103,6 +112,25 @@ void testLEDs ( int *inPins )
   }
 }
 
+void setupLCD ( void ) 
+{
+  for ( int i = 2; i <=7; i++ )
+    pinMode ( i, OUTPUT );
+  analogWrite(2, 0);
+  lcd.begin(16, 2);
+  lcd.print("Testing");
+}
+
+void clearLCD ( void )
+{
+  lcd.clear();
+}
+
+void nextLine( void )
+{
+  lcd.setCursor(0,1);
+}
+
 /*
  * Decode instruction (just going to do Format 1: move shifted register for now)
  * Note - in the final project, this function will be taking pinsIn which will 
@@ -157,8 +185,9 @@ void decodeInstruction(int *inPins) {
       //f 18 19
       f18thru19( in );
       break;
-    deafult:
+    default:
       Serial.println("An error occurred when finding the function.");
+      lcd.print("ERR");
   }
 }
 
@@ -236,27 +265,6 @@ void f18thru19 ( int *in )
     longBranch ( in );
 }
 
-void addSub ( int *in )
-{
-  int rd = bit(2)*in[2] + bit(1)*in[1] + bit(0)*in[0];
-  int rs = bit(2)*in[5] + bit(1)*in[4] + bit(0)*in[3];
-  int rn_off = bit(2)*in[8] + bit(1)*in[7] + bit(0)*in[6];
-  if ( !in[9] )
-    Serial.print("ADD ");
-  else
-    Serial.print("SUB ");
-  Serial.print ( "R" );
-  Serial.print ( rd );
-  Serial.print ( ", R" );
-  Serial.print ( rs );
-  Serial.print ( ", " );
-  if ( !in[10] )
-    Serial.print ( "R" );
-  else
-    Serial.print( "#" );
-  Serial.println ( rn_off );
-}
-
 void moveShifted ( int *in )
 {
   int op = bit(1)*in[12] + bit(0)*in[11];
@@ -266,23 +274,45 @@ void moveShifted ( int *in )
   switch ( op )
   {
     case 0:
-      Serial.print("LSL R");
+      lcd.print("LSL R");
       break;
     case 1:
-      Serial.print("LSR R");
+      lcd.print("LSR R");
       break;
     case 2:
-      Serial.print("ASR R");
+      lcd.print("ASR R");
       break;
     default:
       Serial.println("problem decoding in addSub()");
+      lcd.print("ERR");
       exit(-1);
   }
-  Serial.print(rd);
-  Serial.print(", R");
-  Serial.print(rs);
-  Serial.print(", #");
-  Serial.println(offset);
+  lcd.print(rd);
+  lcd.print(", R");
+  lcd.print(rs);
+  lcd.print(", #");
+  lcd.print(offset);
+}
+
+void addSub ( int *in )
+{
+  int rd = bit(2)*in[2] + bit(1)*in[1] + bit(0)*in[0];
+  int rs = bit(2)*in[5] + bit(1)*in[4] + bit(0)*in[3];
+  int rn_off = bit(2)*in[8] + bit(1)*in[7] + bit(0)*in[6];
+  if ( !in[9] )
+    lcd.print("ADD ");
+  else
+    lcd.print("SUB ");
+  lcd.print ( "R" );
+  lcd.print ( rd );
+  lcd.print ( ", R" );
+  lcd.print ( rs );
+  lcd.print ( ", " );
+  if ( !in[10] )
+    lcd.print ( "R" );
+  else
+    lcd.print( "#" );
+  lcd.print ( rn_off );
 }
 
 void immMCAS ( int *in )
@@ -295,25 +325,26 @@ void immMCAS ( int *in )
   switch (op)
   {
     case 0:
-      Serial.print("MOV R");
+      lcd.print("MOV R");
     break;
     case 1:
-      Serial.print("CMP R");
+      lcd.print("CMP R");
     break;  
     case 2:
-      Serial.print("ADD R");
+      lcd.print("ADD R");
     break;
     case 3:
-      Serial.print("SUB R");
+      lcd.print("SUB R");
     break;
     default:
       Serial.println("Error in decoding move/compare/add/subtract immediate");
+      lcd.print("ERR");
       exit(-1);
   }
   
-    Serial.print(rd);
-    Serial.print(", #");
-    Serial.println(offset8);
+    lcd.print(rd);
+    lcd.print(", #");
+    lcd.print(offset8);
 }
 
 void aluOps ( int *in )
@@ -325,61 +356,62 @@ void aluOps ( int *in )
   switch (op)
   {
     case 0:
-      Serial.print("AND R");
+      lcd.print("AND R");
     break;
     case 1:
-      Serial.print("EOR R");
+      lcd.print("EOR R");
     break;
     case 2:
-      Serial.print("LSL R");
+      lcd.print("LSL R");
     break;
     case 3:
-      Serial.print("LSR R");
+      lcd.print("LSR R");
     break;
     case 4:
-      Serial.print("ASR R");
+      lcd.print("ASR R");
     break;
     case 5:
-      Serial.print("ADC R");
+      lcd.print("ADC R");
     break;
     case 6:
-      Serial.print("SBC R");
+      lcd.print("SBC R");
     break;
     case 7:
-      Serial.print("ROR R");
+      lcd.print("ROR R");
     break;
     case 8:
-      Serial.print("TST R");
+      lcd.print("TST R");
     break;
     case 9:
-      Serial.print("NEG R");
+      lcd.print("NEG R");
     break;
     case 10:
-      Serial.print("CMP R");
+      lcd.print("CMP R");
       break;
     case 11:
-      Serial.print("CMN R");
+      lcd.print("CMN R");
       break;
     case 12:
-      Serial.print("ORR R");
+      lcd.print("ORR R");
       break;
     case 13:
-      Serial.print("MUL R");
+      lcd.print("MUL R");
       break;
     case 14:
-      Serial.print("BIC R");
+      lcd.print("BIC R");
       break;
     case 15:
-      Serial.print("MVN R");
+      lcd.print("MVN R");
       break;
     default:
       Serial.println("Error decoding aluOps");
+      lcd.print("ERR");
       exit(-1);
   }
 
-  Serial.print(rd);
-  Serial.print(", R");
-  Serial.println(rs);  
+  lcd.print(rd);
+  lcd.print(", R");
+  lcd.print(rs);  
 }
 
 void hiRegOps ( int *in )
@@ -393,48 +425,51 @@ void hiRegOps ( int *in )
   switch (op)
   {
     case 0:
-      Serial.print("ADD ");
+      lcd.print("ADD ");
     break;
     case 1:
-      Serial.print("CMP ");
+      lcd.print("CMP ");
     break;
     case 2:
-      Serial.print("MOV ");
+      lcd.print("MOV ");
     break;
     case 3:
-      Serial.print("BX ");
+      lcd.print("BX ");
     break;
     default:
       Serial.println("Error in decoding Hi register operations/branch exchange");
+      lcd.print("ERR");
       exit(-1);
   }
   if ( op != 3 )
   {
     if ( h1 )
-      Serial.print("H");
+      lcd.print("H");
     else
-      Serial.print("R");
-    Serial.print(rd);
-    Serial.print(", ");
+      lcd.print("R");
+    lcd.print(rd);
+    lcd.print(", ");
   }
   if ( h2 )
-    Serial.print("H");
+    lcd.print("H");
   else
-    Serial.print("R");
-  Serial.println(rs);
+    lcd.print("R");
+  lcd.print(rs);
 }
 
 void PCRelLoad ( int *in )
 {
   int word8 = 0;
   int rd = bit(2)*in[10] + bit(1)*in[9] + bit(0)*in[8];
-  for (int i = 7 ; i > -1 ; i--) word8 = word8 + bit(i)*in[i];
+  for (int i = 7 ; i > -1 ; i--) word8 = word8 + bit(i+2)*in[i];
 
-  Serial.print("LDR R");
-  Serial.print(rd);
-  Serial.print(", [PC, #");
-  Serial.print(word8);
-  Serial.println("]");
+  lcd.print("LDR R");
+  lcd.print(rd);
+  lcd.print(", ");
+  nextLine();
+  lcd.print("[PC, #");
+  lcd.print(word8);
+  lcd.print("]");
 }
 
 void loadStoreRegOffset ( int *in )
@@ -447,28 +482,31 @@ void loadStoreRegOffset ( int *in )
   switch (lb)
   {
     case 0:
-      Serial.print("STR R");
+      lcd.print("STR R");
     break;
     case 1:
-      Serial.print("STRB R");
+      lcd.print("STRB R");
     break;
     case 2:
-      Serial.print("LDR R");
+      lcd.print("LDR R");
     break;
     case 3:
-      Serial.print("LDRB R");
+      lcd.print("LDRB R");
     break;
     default:
       Serial.println("Error decoding load/store with register offset");
+      lcd.print("ERR");
       exit(-1);
   }
 
-  Serial.print(rd);
-  Serial.print(", [R");
-  Serial.print(rb);
-  Serial.print(", R");
-  Serial.print(ro);
-  Serial.println("]");
+  lcd.print(rd);
+  lcd.print(", ");
+  if ( lb % 2 ) nextLine();
+  lcd.print("[R");
+  lcd.print(rb);
+  lcd.print(", R");
+  lcd.print(ro);
+  lcd.print("]");
   
 }
 
@@ -482,28 +520,31 @@ void loadStoreSignExt ( int *in )
   switch (hs)
   {
     case 0:
-      Serial.print("STRH R");
+      lcd.print("STRH R");
     break;
     case 1:
-      Serial.print("LDRH R");
+      lcd.print("LDRH R");
     break;
     case 2:
-      Serial.print("LDSB R");
+      lcd.print("LDSB R");
     break;
     case 3:
-      Serial.print("LDSH R");
+      lcd.print("LDSH R");
     break;
     default:
       Serial.println("Error decoding load/store sign-extended byte/halfword");
+      lcd.print("ERR");
       exit (-1);
   }
 
-  Serial.print(rd);
-  Serial.print(", [R");
-  Serial.print(rb);
-  Serial.print(", R");
-  Serial.print(ro);
-  Serial.println("]");
+  lcd.print(rd);
+  lcd.print(", ");
+  nextLine();
+  lcd.print("[R");
+  lcd.print(rb);
+  lcd.print(", R");
+  lcd.print(ro);
+  lcd.print("]");
 }
 
 void loadStoreImm ( int *in )
@@ -513,31 +554,36 @@ void loadStoreImm ( int *in )
   int rb = bit(2)*in[5] + bit(1)*in[4] + bit(0)*in[3];
   int rd = bit(2)*in[2] + bit(1)*in[1] + bit(0)*in[0];
 
+  if ( !in[12] ) offset5 *= 4;
+
   switch (bl)
   {
     case 0:
-      Serial.print("STR R");
+      lcd.print("STR R");
     break;
     case 1:
-      Serial.print("LDR R");
+      lcd.print("LDR R");
     break;
     case 2:
-      Serial.print("STRB R");
+      lcd.print("STRB R");
     break;
     case 3:
-      Serial.print("LDRB R");
+      lcd.print("LDRB R");
     break;
     default:
       Serial.println("Error decoding load/store with immediate offset");
+      lcd.print("ERR");
       exit (-1);
   }
 
-  Serial.print(rd);
-  Serial.print(", [R");
-  Serial.print(rb);
-  Serial.print(", #");
-  Serial.print(offset5);
-  Serial.println("]");
+  lcd.print(rd);
+  lcd.print(", ");
+  nextLine();
+  lcd.print("[R");
+  lcd.print(rb);
+  lcd.print(", #");
+  lcd.print(offset5);
+  lcd.print("]");
 }
 
 void loadStoreHalf ( int *in )
@@ -545,16 +591,19 @@ void loadStoreHalf ( int *in )
   int offset5 = bit(4)*in[10] + bit(3)*in[9] + bit(2)*in[8] + bit(1)*in[7] + bit(0)*in[6];
   int rb = bit(2)*in[5] + bit(1)*in[4] + bit(0)*in[3];
   int rd = bit(2)*in[2] + bit(1)*in[1] + bit(0)*in[0];
+  offset5 *= 2;
 
-  if (in[11] == 0) Serial.print("STRH R");
-  else Serial.print("LDRH R");
+  if (in[11] == 0) lcd.print("STRH R");
+  else lcd.print("LDRH R");
 
-  Serial.print(rd);
-  Serial.print(", [R");
-  Serial.print(rb);
-  Serial.print(", #");
-  Serial.print(offset5);
-  Serial.println("]");
+  lcd.print(rd);
+  lcd.print(", ");
+  nextLine();
+  lcd.print("[R");
+  lcd.print(rb);
+  lcd.print(", #");
+  lcd.print(offset5);
+  lcd.print("]");
 }
 
 void loadStoreSPRel ( int *in )
@@ -562,14 +611,17 @@ void loadStoreSPRel ( int *in )
   int word8 = 0;
   int rd = bit(2)*in[10] + bit(1)*in[9] + bit(0)*in[8];
   for (int i = 7 ; i > -1 ; i--) word8 = word8 + bit(i)*in[i];
+  word8 *= 4;
 
-  if (in[11] == 0) Serial.print("STR R");
-  else Serial.print("LDR R");
+  if (in[11] == 0) lcd.print("STR R");
+  else lcd.print("LDR R");
 
-  Serial.print(rd);
-  Serial.print(", [SP, #");
-  Serial.print(word8);
-  Serial.println("]");
+  lcd.print(rd);
+  lcd.print(", ");
+  nextLine();
+  lcd.print("[SP, #");
+  lcd.print(word8);
+  lcd.print("]");
 }
 
 void loadAddr ( int *in )
@@ -577,30 +629,35 @@ void loadAddr ( int *in )
   int word8 = 0;
   int rd = bit(2)*in[10] + bit(1)*in[9] + bit(0)*in[8];
   for (int i = 7 ; i > -1 ; i--) word8 = word8 + bit(i)*in[i];
+  word8 *= 4;
 
-  Serial.print("ADD R");
-  Serial.print(rd);
-  Serial.print(", ");
-  if (in[11] == 0) Serial.print("PC, #");
-  else Serial.print("SP, #");
-  Serial.println(word8);
+  lcd.print("ADD R");
+  lcd.print(rd);
+  lcd.print(", ");
+  if (in[11] == 0) lcd.print("PC, #");
+  else lcd.print("SP, ");
+  nextLine();
+  lcd.print("#");
+  lcd.print(word8);
 }
 
 void addOffsetSP ( int *in )
 {
   int sWord7 = 0;
   for (int i = 6 ; i > -1 ; i--) sWord7 = sWord7 + bit(i)*in[i];
+  sWord7 *= 4;
 
-  Serial.print("ADD SP, #");
-  if (in[7] == 1) Serial.print("-");
-  Serial.println(sWord7);
+  lcd.print("ADD SP, #");
+  if (in[7] == 1) lcd.print("-");
+  lcd.print(sWord7);
 }
 
 void pushPop ( int *in )
 {
-  int flag;
+  int flag = 0;
   int lr = bit(1)*in[11] + bit(0)*in[8];
   int sum = 0;
+  int count = 0;
   
   for ( int i = 7; i > -1; i-- )
   {
@@ -613,66 +670,75 @@ void pushPop ( int *in )
     switch (lr)
     {
       case 0:
-        Serial.print("PUSH {");
+        lcd.print("PUSH {");
         for (int i = 7 ; i > -1 ; i--) {
           flag = 0;
           if (in[i] == 1) {
-            Serial.print("R");
-            Serial.print(i);
+            count++;
+            lcd.print("R");
+            lcd.print(i);
             for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-            if (flag == 1) Serial.print(", ");
-            else break;
+            if (flag == 1) lcd.print(",");
+            //else break;
           }
+          if ( count == 3 && sum > 3 ) nextLine();
         }
-        Serial.println("}");
+        lcd.print("}");
       break;
       
       case 1:
-        Serial.print("PUSH {");
+        lcd.print("PUSH{");
         for (int i = 7 ; i > -1 ; i--) {
+          if (flag == 1) lcd.print(",");
           flag = 0;
           if (in[i] == 1) {
-            Serial.print("R");
-            Serial.print(i);
+            count++;
+            lcd.print("R");
+            lcd.print(i);
             for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-            if (flag == 1) Serial.print(", ");
-            else break;
+            //else break;
           }
+          if ( count == 3 && sum >= 3) nextLine();
         }
-        Serial.println(", LR}");
+        lcd.print(",LR}");
       break;
   
       case 2:
-        Serial.print("POP {");
+        lcd.print("POP {");
         for (int i = 7 ; i > -1 ; i--) {
           flag = 0;
           if (in[i] == 1) {
-            Serial.print("R");
-            Serial.print(i);
+            count++;
+            lcd.print("R");
+            lcd.print(i);
             for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-            if (flag == 1) Serial.print(", ");
-            else break;
+            if (flag == 1) lcd.print(",");
+            //else break;
           }
+          if ( count == 3 && sum > 3 ) nextLine();
         }
-        Serial.println("}");
+        lcd.print("}");
       break;
   
       case 3:
-        Serial.print("POP {");
+        lcd.print("POP{");
         for (int i = 7 ; i > -1 ; i--) {
           flag = 0;
           if (in[i] == 1) {
-            Serial.print("R");
-            Serial.print(i);
+            count++;
+            lcd.print("R");
+            lcd.print(i);
             for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-            if (flag == 1) Serial.print(", ");
-            else break;
+            if (flag == 1) lcd.print(",");
+            //else break;
           }
+          if ( count == 4 && sum >= 4 ) nextLine();
         }
-        Serial.println(", PC}");
+        lcd.print(",PC}");
       break;
       default:
         Serial.println("Error decoding push/pop registers");
+        lcd.print("ERR");
         exit (-1);  
     }
   }
@@ -683,24 +749,24 @@ void multLoadStore ( int *in )
   int flag;
   int rb = bit(2)*in[10] + bit(1)*in[9] + bit(0)*in[8];
 
-  if (in[11] == 0) Serial.print("STMIA R");
-  else Serial.print("LDMIA R");
+  if (in[11] == 0) lcd.print("STMIA R");
+  else lcd.print("LDMIA R");
 
-  Serial.print(rb);
-  Serial.print("!, {");
+  lcd.print(rb);
+  lcd.print("!, {");
  
   for (int i = 7 ; i > -1 ; i--) {
     flag = 0;
     if (in[i] == 1) {
-      Serial.print("R");
-      Serial.print(i);
+      lcd.print("R");
+      lcd.print(i);
       for (int j = i-1 ; j > -1 ; j--) if (in[j] == 1) flag = 1;
-      if (flag == 1) Serial.print(", ");
+      if (flag == 1) lcd.print(", ");
       else break;
     }
   }
 
-  Serial.println("}");
+  lcd.print("}");
 }
 
 void condBranch ( int *in )
@@ -712,54 +778,55 @@ void condBranch ( int *in )
   switch (cond)
   {
     case 0:
-      Serial.print("BEQ ");
+      lcd.print("BEQ ");
     break;
     case 1:
-      Serial.print("BNE ");
+      lcd.print("BNE ");
     break;
     case 2:
-      Serial.print("BCS ");
+      lcd.print("BCS ");
     break;
     case 3:
-      Serial.print("BCC ");
+      lcd.print("BCC ");
     break;
     case 4:
-      Serial.print("BMI ");
+      lcd.print("BMI ");
     break;
     case 5:
-      Serial.print("BPL ");
+      lcd.print("BPL ");
     break;
     case 6:
-      Serial.print("BVS ");
+      lcd.print("BVS ");
     break;
     case 7:
-      Serial.print("BVC ");
+      lcd.print("BVC ");
     break;
     case 8:
-      Serial.print("BHI ");
+      lcd.print("BHI ");
     break;
     case 9:
-      Serial.print("BLS ");
+      lcd.print("BLS ");
     break;
     case 10:
-      Serial.print("BGE ");
+      lcd.print("BGE ");
     break;
     case 11:
-      Serial.print("BLT ");
+      lcd.print("BLT ");
     break;
     case 12:
-      Serial.print("BGT ");
+      lcd.print("BGT ");
     break;
     case 13:
-      Serial.print("BLE ");
+      lcd.print("BLE ");
     break;
     default:
       Serial.println("Error decoding conditional branch");
+      lcd.print("ERR");
       exit (-1);
   }
-  Serial.print("");
+  lcd.print("");
   if ( in[7] ) sOffset8 = (sOffset8*-1) - 2;
-  Serial.println(sOffset8);
+  lcd.print(sOffset8);
 }
 
 void softwareInt ( int *in )
@@ -767,21 +834,21 @@ void softwareInt ( int *in )
   int value8 = 0;
   for (int i = 7 ; i > -1 ; i--) value8 = value8 + bit(i)*in[i];
 
-  Serial.print("SWI ");
-  Serial.println(value8);
+  lcd.print("SWI ");
+  lcd.print(value8);
 }
 
 void uncondBranch ( int *in )
 {
   int value11 = 0;
   for ( int i = 9; i > -1; i--) value11 += bit(i+1)*in[i];
-  Serial.print("B ");
+  lcd.print("B ");
   if ( in[10] ) value11 = (value11*-1) - 2;
-  Serial.println(value11);
+  lcd.print(value11);
 }
 
 void longBranch ( int *in )
 {
-  Serial.println("BL label");
+  lcd.print("BL label");
 }
 
